@@ -79,28 +79,40 @@
     });
   </script>
 
-<br /><input type="submit" value="Choose" />
-</form>
+<br />
 
+<h2>Time Range</h2>
+Begin Time:
+<input type="text" name="begin_time" placeholder="HH:mm a">
+End Time:
+<input type="text" name="end_time" placeholder="HH:mm a">
+<input type="submit" value="Choose">
+</form>
     <!--
     Show the calendar list (if we have it).  This will need to be turned into
     a form from which calendars can be picked. Up to three entries are
     shown in each row (but the order is across then down; I would
     prefer down then across). 
     -->
+
 {% if g.calendars is defined  %}
+  <h2>Calendars</h2>
   <div class="row">
+  <form action="/chooseCal" method="POST">
   {% for cal in g.calendars if cal.selected %}
           <div class="col-md-4">
-	   {{ cal.summary }}
+          <input type="checkbox" value="{{ cal.id }}" name="vals">{{ cal.summary  }}</input>
           </div>
          {% if loop.index is divisibleby 3 %}
           </div> <div class="row">
          {% endif %}
   {% endfor %}
   </div>
+  <input type="submit" value="Choose">
+  </form>
 {% endif %}
-    
+<br>
+
 
   </div>  <!-- container (for bootstrap) -->
   </body> </html>

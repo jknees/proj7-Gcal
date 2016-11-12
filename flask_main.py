@@ -9,7 +9,7 @@ import logging
 
 # Date handling 
 import arrow # Replacement for datetime, based on moment.js
-# import datetime # But we still need time
+import datetime # But we still need time
 from dateutil import tz  # For interpreting local times
 
 
@@ -194,8 +194,10 @@ def setrange():
     widget.
     """
     app.logger.debug("Entering setrange")  
-    flask.flash("Setrange gave us '{}'".format(
+    flask.flash("Date range: '{}'".format(
       request.form.get('daterange')))
+    settimerange()
+    app.logger.debug("SetTimeRange parsed begin and end time as {} - {}".format(flask.session['begin_time'], flask.session['end_time']))
     daterange = request.form.get('daterange')
     flask.session['daterange'] = daterange
     daterange_parts = daterange.split()
@@ -205,6 +207,47 @@ def setrange():
       daterange_parts[0], daterange_parts[1], 
       flask.session['begin_date'], flask.session['end_date']))
     return flask.redirect(flask.url_for("choose"))
+
+def settimerange():
+  app.logger.debug("Entering setrange")
+  flask.flash("Times given: '{}' - '{}'".format(request.form.get('begin_time'), request.form.get('end_time')))
+  begin_time = request.form.get('begin_time')
+  end_time = request.form.get('end_time')
+  flask.session["end_time"]= interpret_time(end_time)
+  flask.session["begin_time"]= interpret_time(begin_time)
+
+
+@app.route('/chooseCal', methods=['POST'])
+def chooseCal():
+  app.logger.debug("Checking credentials")
+  credentials = valid_credentials()
+  if not credentials:
+    app.logger.debug("Redirecting to authorization")
+    return flask.redirect(flask.url_for('oauth2callback'))
+  gcal_service = get_gcal_service(credentials)
+  app.logger.debug("Returned from get_gcal_service")
+  
+  begin_date = arrow.get(flask.session['begin_date'])
+  end_date = arrow.get(flask.session['end_date'])
+  begin_time = arrow.get(flask.session['begin_time']).timetz()
+  end_time = arrow.get(flask.session['end_time']).timetz()
+
+  sCal = request.form.getlist('vals')
+  app.logger.debug("sCal: {}".format(sCal))
+  events = []
+
+  for cal in sCal:
+    events.extend(list_events(gcal_service, begin_date.isoformat(), end_date.isoformat(), cal))
+  
+  
+  app.logger.debug("Events: {}".format(events))
+  for e in events:
+    if (arrow.get(e['end_time']).timetz() < begin_time or arrow.get(e['start_time']).timetz() > end_time):
+      events.remove(e)
+    else:
+      flask.flash("Name: {}   Start time: {}  Endtime: {}".format(e["summary"], e["start_time"], e["end_time"]))
+  return flask.redirect(url_for('choose'))
+
 
 ####
 #
@@ -229,6 +272,7 @@ def init_session_values():
     # Default time span each day, 8 to 5
     flask.session["begin_time"] = interpret_time("9am")
     flask.session["end_time"] = interpret_time("5pm")
+
 
 def interpret_time( text ):
     """
@@ -319,6 +363,23 @@ def list_calendars(service):
             })
     return sorted(result, key=cal_sort_key)
 
+def list_events(service, begin_time, end_time, calId):
+  app.logger.debug("Entering list_events")
+  event_list = service.events().list(calendarId=calId, timeMin=begin_time, timeMax=end_time).execute()['items']
+  results = []
+  app.logger.debug("Events(in list_events): {}".format(event_list))
+  for event in event_list:
+    if "transparency" not in event:
+      summary = event["summary"]
+      start_time = event["start"]["dateTime"]
+      end_time = event["end"]["dateTime"]
+
+      results.append(
+        { "summary": summary,
+          "start_time": start_time,
+          "end_time": end_time
+          })
+  return sorted(results, key=lambda k: k["start_time"])
 
 def cal_sort_key( cal ):
     """
