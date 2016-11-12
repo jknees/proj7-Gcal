@@ -196,26 +196,32 @@ def setrange():
     app.logger.debug("Entering setrange")  
     flask.flash("Date range: '{}'".format(
       request.form.get('daterange')))
-    settimerange()
+
+    begin_time = request.form.get('begin_time')
+    end_time = request.form.get('end_time')
+    set_time_range()
+
     app.logger.debug("SetTimeRange parsed begin and end time as {} - {}".format(flask.session['begin_time'], flask.session['end_time']))
+
     daterange = request.form.get('daterange')
-    flask.session['daterange'] = daterange
-    daterange_parts = daterange.split()
-    flask.session['begin_date'] = interpret_date(daterange_parts[0])
-    flask.session['end_date'] = interpret_date(daterange_parts[2])
-    app.logger.debug("Setrange parsed {} - {}  dates as {} - {}".format(
-      daterange_parts[0], daterange_parts[1], 
-      flask.session['begin_date'], flask.session['end_date']))
+    set_date_range()
+    
     return flask.redirect(flask.url_for("choose"))
 
-def settimerange():
+def set_time_range(begin_time, end_time):
   app.logger.debug("Entering setrange")
   flask.flash("Times given: '{}' - '{}'".format(request.form.get('begin_time'), request.form.get('end_time')))
-  begin_time = request.form.get('begin_time')
-  end_time = request.form.get('end_time')
   flask.session["end_time"]= interpret_time(end_time)
   flask.session["begin_time"]= interpret_time(begin_time)
 
+def set_date_range(daterange):
+  flask.session['daterange'] = daterange
+  daterange_parts = daterange.split()
+  flask.session['begin_date'] = interpret_date(daterange_parts[0])
+  flask.session['end_date'] = interpret_date(daterange_parts[2])
+  app.logger.debug("Setrange parsed {} - {}  dates as {} - {}".format(
+    daterange_parts[0], daterange_parts[1], 
+    flask.session['begin_date'], flask.session['end_date']))
 
 @app.route('/chooseCal', methods=['POST'])
 def chooseCal():
