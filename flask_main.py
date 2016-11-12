@@ -199,12 +199,12 @@ def setrange():
 
     begin_time = request.form.get('begin_time')
     end_time = request.form.get('end_time')
-    set_time_range()
+    set_time_range(begin_time, end_time)
 
     app.logger.debug("SetTimeRange parsed begin and end time as {} - {}".format(flask.session['begin_time'], flask.session['end_time']))
 
     daterange = request.form.get('daterange')
-    set_date_range()
+    set_date_range(daterange)
     
     return flask.redirect(flask.url_for("choose"))
 
